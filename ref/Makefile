@@ -1,6 +1,6 @@
 CC ?= /usr/bin/cc
 CFLAGS += -Wall -Wextra -Wpedantic -Wmissing-prototypes -Wredundant-decls \
-  -Wshadow -Wpointer-arith -O3 -fomit-frame-pointer -z noexecstack
+  -Wshadow -Wpointer-arith -O3 -fomit-frame-pointer
 NISTFLAGS += -Wno-unused-result -O3 -fomit-frame-pointer
 RM = /bin/rm
 
@@ -11,7 +11,7 @@ HEADERSKECCAK = $(HEADERS) fips202.h
 
 .PHONY: all speed shared clean
 
-all: test speed shared nistkat
+all: test speed # shared nistkat
 
 test: \
   test/test_kyber512 \
@@ -107,4 +107,3 @@ clean:
 	-$(RM) -f nistkat/*.req
 	-$(RM) -f nistkat/*.rsp
 	-$(RM) -rf lib/
-

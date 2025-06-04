@@ -11,14 +11,31 @@
 #include "cpucycles.h"
 #include "speed_print.h"
 
-#define NTESTS 1000
+#define NTESTS 300
+#define NITERATIONS 500
+#define NWARMUP 50
+
+#define BENCH(code, msg)			\
+    for(i=0; i < NTESTS; i++)	{		\
+	for (j=0; j < NWARMUP; j++) {		\
+	    code;				\
+	}					\
+        t0 = cpucycles();			\
+	for (j=0; j < NITERATIONS; j++) {	\
+	    code;				\
+	}					\
+	t1 = cpucycles();			\
+	t[i] = (t1 - t0) / NITERATIONS;		\
+    }					        \
+    print_results(msg, t, NTESTS)
 
 uint64_t t[NTESTS];
 uint8_t seed[KYBER_SYMBYTES] = {0};
 
 int main(void)
 {
-  unsigned int i;
+  enable_cyclecounter();
+  unsigned int i, j;
   uint8_t pk[CRYPTO_PUBLICKEYBYTES];
   uint8_t sk[CRYPTO_SECRETKEYBYTES];
   uint8_t ct[CRYPTO_CIPHERTEXTBYTES];
@@ -27,129 +44,14 @@ int main(void)
   uint8_t coins64[2*KYBER_SYMBYTES];
   polyvec matrix[KYBER_K];
   poly ap;
+  uint64_t t0, t1;
 
   randombytes(coins32, KYBER_SYMBYTES);
   randombytes(coins64, 2*KYBER_SYMBYTES);
 
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    gen_matrix(matrix, seed, 0);
-  }
-  print_results("gen_a: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    poly_getnoise_eta1(&ap, seed, 0);
-  }
-  print_results("poly_getnoise_eta1: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    poly_getnoise_eta2(&ap, seed, 0);
-  }
-  print_results("poly_getnoise_eta2: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    poly_ntt(&ap);
-  }
-  print_results("NTT: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    poly_invntt_tomont(&ap);
-  }
-  print_results("INVNTT: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    polyvec_basemul_acc_montgomery(&ap, &matrix[0], &matrix[1]);
-  }
-  print_results("polyvec_basemul_acc_montgomery: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    poly_tomsg(ct,&ap);
-  }
-  print_results("poly_tomsg: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    poly_frommsg(&ap,ct);
-  }
-  print_results("poly_frommsg: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    poly_compress(ct,&ap);
-  }
-  print_results("poly_compress: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    poly_decompress(&ap,ct);
-  }
-  print_results("poly_decompress: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    polyvec_compress(ct,&matrix[0]);
-  }
-  print_results("polyvec_compress: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    polyvec_decompress(&matrix[0],ct);
-  }
-  print_results("polyvec_decompress: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    indcpa_keypair_derand(pk, sk, coins32);
-  }
-  print_results("indcpa_keypair: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    indcpa_enc(ct, key, pk, seed);
-  }
-  print_results("indcpa_enc: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    indcpa_dec(key, ct, sk);
-  }
-  print_results("indcpa_dec: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    crypto_kem_keypair_derand(pk, sk, coins64);
-  }
-  print_results("kyber_keypair_derand: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    crypto_kem_keypair(pk, sk);
-  }
-  print_results("kyber_keypair: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    crypto_kem_enc_derand(ct, key, pk, coins32);
-  }
-  print_results("kyber_encaps_derand: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    crypto_kem_enc(ct, key, pk);
-  }
-  print_results("kyber_encaps: ", t, NTESTS);
-
-  for(i=0;i<NTESTS;i++) {
-    t[i] = cpucycles();
-    crypto_kem_dec(key, ct, sk);
-  }
-  print_results("kyber_decaps: ", t, NTESTS);
+  BENCH(crypto_kem_keypair_derand(pk, sk, coins64), "keypair");
+  BENCH(crypto_kem_enc_derand(ct, key, pk, coins32), "enc");
+  BENCH(crypto_kem_dec(key, ct, sk), "dec");
 
   return 0;
 }
